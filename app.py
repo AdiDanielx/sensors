@@ -5,6 +5,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
+import pytz
 
 st.markdown("<h1 style='text-align: center;'>Smart Steps: Crutch Pressure Monitoring Dashboard</h1>", unsafe_allow_html=True)
 st.markdown("### Overview of Smart Steps")
@@ -27,7 +28,8 @@ if page == "Walking Statistics":
     inactive_indices = [i for i in range(total_hours) if i not in active_hours_indices]
     weights[inactive_indices] = np.random.uniform(0, 10, num_inactive_hours)  # משקל מתחת ל-10
     data = pd.DataFrame({'DateTime': dates, 'WeightOnCrutches': weights})
-    current_hour = datetime.now().hour
+    israel_timezone = pytz.timezone('Asia/Jerusalem')
+    current_hour = datetime.now(israel_timezone).hour
     data = data[data['DateTime'].dt.hour <= current_hour]
     active_hours = data[data['WeightOnCrutches'] > 10]['DateTime'].dt.hour.value_counts().sort_index()
     active_time = active_hours.sum()
