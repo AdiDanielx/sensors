@@ -1,86 +1,173 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
-import pytz
+from PIL import Image
 
-st.markdown("<h1 style='text-align: center;'>Smart Steps: Crutch Pressure Monitoring Dashboard</h1>", unsafe_allow_html=True)
-st.markdown("### Overview of Smart Steps")
-st.markdown("Smart Steps is designed to provide insights into the pressure applied on crutches during rehabilitation.")
+# User information
+user_name = "Alex Green"
 
-# סרגל ניווט
-page = st.sidebar.selectbox("Select Page", ["Walking Statistics", "Time Walked", "Alerts Count"])
+# Dashboard Title and Welcome Message
+st.markdown(f"<h1 style='text-align: center;'>Smart Steps Dashboard for <br> {user_name}</h1>", unsafe_allow_html=True)
 
-if page == "Walking Statistics":
-    # דף ראשון
-    dates = pd.date_range(start='2023-01-01', end='2023-01-02', freq='H')
-    total_hours = len(dates)
-    active_percentage = 0.5  
-    inactive_percentage = 1 - active_percentage  
-    num_active_hours = int(total_hours * active_percentage)
-    num_inactive_hours = total_hours - num_active_hours
-    weights = np.zeros(total_hours)
-    active_hours_indices = np.random.choice(total_hours, num_active_hours, replace=False)
-    weights[active_hours_indices] = np.random.uniform(11, 50, num_active_hours)  # משקל מעל 10
-    inactive_indices = [i for i in range(total_hours) if i not in active_hours_indices]
-    weights[inactive_indices] = np.random.uniform(0, 10, num_inactive_hours)  # משקל מתחת ל-10
-    data = pd.DataFrame({'DateTime': dates, 'WeightOnCrutches': weights})
-    israel_timezone = pytz.timezone('Asia/Jerusalem')
-    current_hour = datetime.now(israel_timezone).hour
-    data = data[data['DateTime'].dt.hour <= current_hour]
-    active_hours = data[data['WeightOnCrutches'] > 10]['DateTime'].dt.hour.value_counts().sort_index()
-    active_time = active_hours.sum()
-    inactive_time = len(data) - active_time 
-    fig_today = go.Figure(data=[go.Pie(
-        labels=['Active', 'Inactive'],
-        values=[active_time, inactive_time],
-        hole=0.3,
-        textinfo='label+percent',
-        hoverinfo='label+value+text',
-        hovertext=['Hours: {}'.format(active_time), 'Hours: {}'.format(inactive_time)]
-    )])
-    fig_today.update_layout(title_text=f"Percentage of Time Spent<br> Walking Until Now <br> (at {current_hour})", title_font=dict(size=16))
-    st.plotly_chart(fig_today)
+# Sidebar Time Frame Selection
+time_frame = st.sidebar.selectbox(
+    "Select Time Frame for Dashboard Display",
+    ("Today", "Last Week", "Select Month")
+)
 
-elif page == "Time Walked":
-    # דף שני
-    dates = pd.date_range(start='2023-10-23', end='2023-10-29', freq='D')  
-    time_walked = np.random.randint(30, 120, size=len(dates))  
-    alerts_count = np.random.randint(1, 5, size=len(dates))  
-    weight_factor = np.random.randint(30, 80, size=len(dates))
-    data_2 = pd.DataFrame({
-        'Date': dates,
-        'TotalTimeWalked': time_walked,
-        'AlertsCount': alerts_count,
-        'WeightApplied': weight_factor
-    })
+col1, col2 = st.columns(2, gap="large")
 
-    fig = px.bar(data_2, x=data_2['Date'].dt.strftime('%A'), y='TotalTimeWalked',
-                 labels={'TotalTimeWalked': 'Total Time Walked (minutes)', 'x': 'Day'},
-                 title="Total Time Walked Each <br> Day of the Week")
-    fig.update_traces(marker_line_width=1.5, marker_line_color="black")
-    fig.update_layout(xaxis_tickangle=-45)
+# Today's Dashboard
+if time_frame == "Today":
+    st.markdown("<h2 style='text-align: center;'>Daily Progress Overview</h2>", unsafe_allow_html=True)
+
+    st.write(f"""
+    Welcome to the daily progress dashboard for **{user_name}**. This dashboard offers a snapshot of today's rehabilitation metrics, providing real-time insights into goal completion, weight application during walking, and weight consistency throughout the day.
+
+    By reviewing these metrics, you can monitor the patient's adherence to their daily rehabilitation targets and make necessary adjustments to maximize recovery outcomes.
+    """)
+
+    st.subheader("1. Daily Goal Completion")
+    completion = 75
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=completion,
+        number={"suffix": "%"},
+        title={"text": "150 meters left"},
+        gauge={"axis": {"range": [0, 100]}, "bar": {"color": "#16a085"}}
+    ))
     st.plotly_chart(fig)
 
-elif page == "Alerts Count":
-    # דף שלישי
-    dates = pd.date_range(start='2023-10-23', end='2023-10-29', freq='D')  
-    time_walked = np.random.randint(30, 120, size=len(dates))  
-    alerts_count = np.random.randint(1, 5, size=len(dates))  
-    weight_factor = np.random.randint(30, 80, size=len(dates))
-    data_2 = pd.DataFrame({
-        'Date': dates,
-        'TotalTimeWalked': time_walked,
-        'AlertsCount': alerts_count,
-        'WeightApplied': weight_factor
+    st.subheader("2. Weight Applied During Walking")
+    pie_data = pd.DataFrame({
+        "Category": ["Insufficient Weight", "Sufficient Weight"],
+        "Values": [30, 70]
     })
+    fig_pie = px.pie(pie_data, names="Category", values="Values",
+                     color_discrete_sequence=["#abebc6", "#16a085"])
+    st.plotly_chart(fig_pie)
 
-    fig_alerts = px.bar(data_2, x=data_2['Date'].dt.strftime('%A'), y='AlertsCount',
-                        labels={'AlertsCount': 'Alerts Count', 'x': 'Day'},
-                        title="Alerts Count Per <br> Day of the Week")
-    fig_alerts.update_traces(marker_line_width=1.5, marker_line_color="black")
-    fig_alerts.update_layout(xaxis_tickangle=-45)
-    st.plotly_chart(fig_alerts)
+    st.subheader("3. Weight Applied Over Time")
+    time_data = pd.date_range(start="08:00", end="20:00", freq="H")
+    weight_data = np.random.randint(20, 100, len(time_data))
+    line_chart_data = pd.DataFrame({"Time": time_data, "Weight Applied (kg)": weight_data})
+    fig_line = px.line(line_chart_data, x="Time", y="Weight Applied (kg)")
+    fig_line.update_traces(line=dict(color="#16a085"))
+    st.plotly_chart(fig_line)
+
+# Last Week's Dashboard
+if time_frame == "Last Week":
+    days_of_week = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    weight_data = np.random.randint(20, 100, size=7)
+    time_in_ranges = [np.random.randint(30, 60) for _ in range(7)]
+    distance_data = np.cumsum(np.random.randint(50, 150, size=7))
+    step_data = np.random.randint(500, 1500, size=7)
+    goal_completion = np.random.randint(60, 100, size=7)
+
+    df = pd.DataFrame({
+        "Day": days_of_week,
+        "Average Weight Applied (kg)": weight_data,
+        "Time in Sufficient Weight (min)": time_in_ranges,
+        "Cumulative Distance (m)": distance_data,
+        "Steps": step_data,
+        "Goal Completion (%)": goal_completion
+    })
+    st.markdown("<h2 style='text-align: center;'>Weekly Progress Overview</h2>", unsafe_allow_html=True)
+
+    st.write(f"""
+    Welcome to the weekly progress dashboard for **{user_name}**. This dashboard provides a comprehensive view of rehabilitation metrics for the past week, including daily weight application averages, time spent in sufficient weight-bearing ranges, cumulative distance covered, and goal completion rates.
+
+    Use these insights to track trends and monitor progress, helping to assess adherence to weekly rehabilitation goals and identify any areas where adjustments may be needed to enhance recovery outcomes.
+    """)
+
+    st.subheader("1. Average Weight Applied Throughout the Week")
+    fig1 = px.line(df, x="Day", y="Average Weight Applied (kg)")
+    fig1.update_traces(line=dict(color="#16a085"))
+    st.plotly_chart(fig1)
+
+    st.subheader("2. Time Spent in Sufficient vs. Insufficient Weight Ranges")
+    total_time_per_day = np.random.randint(30, 90, size=7)
+    insufficient_weight_time = total_time_per_day - df["Time in Sufficient Weight (min)"]
+    fig2 = go.Figure()
+    fig2.add_trace(go.Bar(x=days_of_week, y=df["Time in Sufficient Weight (min)"], name="Sufficient Weight", marker_color="#16a085"))
+    fig2.add_trace(go.Bar(x=days_of_week, y=insufficient_weight_time, name="Insufficient Weight", marker_color="#abebc6"))
+    fig2.update_layout(barmode='stack', xaxis_title="Day", yaxis_title="Time (minutes)")
+    st.plotly_chart(fig2)
+
+    st.subheader("3. Cumulative Distance Covered Over the Week")
+    fig3 = px.area(df, x="Day", y="Cumulative Distance (m)")
+    fig3.update_traces(line=dict(color="#16a085"), fillcolor="#16a085")
+    st.plotly_chart(fig3)
+
+    st.subheader("4. Goal Completion Throughout the Week")
+    fig8 = px.line(df, x="Day", y="Goal Completion (%)")
+    fig8.update_traces(line=dict(color="#16a085"))
+    st.plotly_chart(fig8)
+
+# Monthly Dashboard
+if time_frame == 'Select Month':
+    date_range = pd.date_range(start="2023-08-01", end="2023-10-31", freq="D")
+    data = {
+        "Date": date_range,
+        "Weight Applied (kg)": np.random.randint(20, 100, len(date_range)),
+        "Time in Sufficient Weight (min)": np.random.randint(30, 60, len(date_range)),
+        "Distance (m)": np.random.randint(100, 1000, len(date_range)),
+        "Steps": np.random.randint(500, 2000, len(date_range)),
+        "Goal Completion (%)": np.random.randint(50, 100, len(date_range))
+    }
+    df = pd.DataFrame(data)
+
+    st.sidebar.header("Select Month and Year")
+    year = st.sidebar.selectbox("Year", sorted(df["Date"].dt.year.unique(), reverse=True))
+    month = st.sidebar.selectbox("Month", sorted(df["Date"].dt.month.unique(), reverse=True))
+
+    filtered_df = df[(df["Date"].dt.year == year) & (df["Date"].dt.month == month)].copy()
+    filtered_df["Day"] = filtered_df["Date"].dt.day
+    filtered_df["Day of Week"] = filtered_df["Date"].dt.strftime('%A')
+    filtered_df["Week"] = (filtered_df["Date"].dt.day - 1) // 7 + 1
+    filtered_df = filtered_df[filtered_df["Week"] <= 4]
+    st.markdown(f"<h2 style='text-align: center;'>Monthly Progress Overview for {datetime(year, month, 1).strftime('%B %Y')}</h2>", unsafe_allow_html=True)
+
+    st.write(f"""
+    This dashboard provides a detailed look at the rehabilitation progress for **{datetime(year, month, 1).strftime('%B %Y')}**. 
+    Here, you’ll find insights into daily weight application, time spent in sufficient weight-bearing ranges, cumulative distance covered, step counts, and goal completion percentages.
+
+    Use these metrics to monitor progress and identify areas that may need adjustment in the rehabilitation plan.
+    """)
+
+    st.subheader(f"1. Weekly Weight Application Trends for {datetime(year, month, 1).strftime('%B %Y')}")
+    color_map = {1: "#a569bd", 2: "#48c9b0", 3: "#f4d03f", 4: "#5499c7"}
+    fig = px.line(filtered_df, x="Day of Week", y="Weight Applied (kg)", color="Week")
+    for i, week in enumerate(filtered_df["Week"].unique()):
+        if week in color_map:
+            fig.data[i].line.color = color_map[week]
+    st.plotly_chart(fig)
+
+    st.subheader("2. Time in Sufficient vs. Insufficient Weight Ranges")
+
+    # Generate random total time per day and calculate insufficient weight time
+    total_time_per_day = np.random.randint(30, 90, size=len(filtered_df))
+    insufficient_weight_time = np.maximum(0, total_time_per_day - filtered_df["Time in Sufficient Weight (min)"])  # Ensure no negative values
+
+    # Create the stacked bar chart
+    fig2 = go.Figure()
+    fig2.add_trace(go.Bar(x=filtered_df["Day"], y=filtered_df["Time in Sufficient Weight (min)"], name="Sufficient Weight", marker_color="#16a085"))
+    fig2.add_trace(go.Bar(x=filtered_df["Day"], y=insufficient_weight_time, name="Insufficient Weight", marker_color="#abebc6"))
+    fig2.update_layout(barmode='stack', title="Time Spent in Sufficient vs. Insufficient Weight Ranges", xaxis_title="Day", yaxis_title="Time (minutes)")
+
+    # Display the chart
+    st.plotly_chart(fig2)
+
+    st.subheader("3. Cumulative Distance Covered Throughout the Month")
+    filtered_df["Cumulative Distance"] = filtered_df["Distance (m)"].cumsum()
+    fig3 = px.area(filtered_df, x="Day", y="Cumulative Distance")
+    fig3.update_traces(line=dict(color="#16a085"), fillcolor="#16a085")
+    st.plotly_chart(fig3)
+
+    st.subheader("4. Daily Goal Completion Percentage")
+    fig4 = px.line(filtered_df, x="Day", y="Goal Completion (%)")
+    fig4.update_traces(line=dict(color="#16a085"))
+    st.plotly_chart(fig4)
